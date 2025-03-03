@@ -33,8 +33,8 @@ movement_threshold = 30 # Pixels allowed for movement
 initial_face_position = None
 
 # Define size constraints (30% to 70%)
-min_size_percentage = 40
-max_size_percentage = 70
+min_size_percentage = 30
+max_size_percentage = 60
 min_size_percentage2 = 20
 max_size_percentage2 = 30
 freeze = False
@@ -63,14 +63,14 @@ while True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Detect faces
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    faces = DeepFace.extract_faces(frame, detector_backend='ssd', enforce_detection=False, anti_spoofing=True)
 
     # Process each detected face
-    if len(faces) > 0:
-        x, y, w, h = faces[0] 
+    for face in faces:
+        region = face["facial_area"]  # Get bounding box
+        x, y, w, h = region["x"], region["y"], region["w"], region["h"]
 
     
-        
         # Calculate face size as a percentage of frame size
         face_width_percentage = (w / frame_width) * 100
         face_height_percentage = (h / frame_height) * 100
@@ -107,24 +107,38 @@ while True:
                 face = frame[y:y+h, x:x+w]  # Crop the face
                 results = DeepFace.find(face, db_path="./db", enforce_detection=False, silent=True)
     
-                if results and not results[0].empty:
-                    best_match = results[0].iloc[0]
-                    identity = best_match['identity']
+                # if results and not results[0].empty:
+                for result in results:
+                    identity = result['identity'].iloc[0]
         
                     # Proper filename extraction
                     filename = os.path.basename(identity)
                     file_key = os.path.splitext(filename)[0]
-        
-                    text = data.get(file_key, "Ro'yxatdan o'tmagan")
-                    if text == "Ro'yxatdan o'tmagan":
-                        color = red
+                    verification_resolt = DeepFace.verify(img1_path=os.path.join("./db", filename), img2_path=face, enforce_detection=False, anti_spoofing=True)
+                    if verification_resolt and verification_resolt['verified']:
+                        distance = verification_resolt["distance"]
+                        threshold = verification_resolt["threshold"]  # Model-specific threshold for face match
+
+                        # Convert distance to percentage similarity (Lower distance = Higher similarity)
+                        confidence = max(0, (1 - distance / threshold) * 100)
+
+                        print(f"Match: {verification_resolt['verified']}")
+                        print(f"Distance: {distance:.4f}")
+                        print(f"Confidence: {confidence:.2f}%")
+                    
+
+                        text = data.get(file_key, "Ro'yxatdan o'tmagan")
+                        if text == "Ro'yxatdan o'tmagan":
+                            color = red
+                        else:
+                            color = green
+                    
+                        text += f" {1 - result['distance']:.2f} %"
+                        # Reset counters
+                        initial_face_position = None
                     else:
-                        color = green
-                    
-                    text += f" {1 - best_match['distance']:.2f} %"
-                    # Reset counters
-                    initial_face_position = None
-                    
+                        color = red
+                        text = f"Ro'yxatdan o'tmagan"
                 else:
                     color = red
                     text = f"Ro'yxatdan o'tmagan"
@@ -137,7 +151,7 @@ while True:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-                sleep(5)
+                sleep(3)
 
             else:
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
@@ -158,3 +172,6 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+
+
