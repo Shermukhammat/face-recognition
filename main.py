@@ -18,7 +18,7 @@ class Params:
     start_time = None
     movement_threshold = 30 # Pixels allowed for movement
     initial_face_position = None
-    anti_spoofling = False
+    anti_spoofling = True
 
     # Define size constraints (30% to 70%)
     max_height = 80
@@ -82,6 +82,12 @@ class Face:
     
 
 
+class VerificationResolt:
+    def __init__(self, verified : bool = False):
+        self.verified = verified
+        # DeepFace.verify()
+        
+
 class FaceRecognizer:
     def __init__(self, camera : int = 0):
         self.cap = cv2.VideoCapture(camera)
@@ -109,44 +115,39 @@ class FaceRecognizer:
                 
                 if not face.is_real and Params.anti_spoofling:
                     Params.initial_face_position = None
+                    if not show(frame, self.frame_name):
+                        break
 
                 elif face.size_to_large(frame):
-                    if not self.show(frame):
+                    if not show(frame, self.frame_name):
                         break
 
                 elif face.size_to_small(frame):
-                    if not self.show(frame, face=face, text = "Yaqinroq keling", text_color=Colors.RED, rectangle_color=Colors.RED):
+                    if not show(frame, self.frame_name, face=face, text = "Yaqinroq keling", color = Colors.RED):
                         break
                     
                 elif face.moved_too_much():
-                    if not self.show(frame):
+                    if not show(frame, self.frame_name):
                         break
                 
                 elif Params.countdown <= 0:
-                    if not self.show(frame, face = face, text = f'Aniqlanmoqda'):
+                    if not show(frame, self.frame_name, face = face, text = f'Aniqlanmoqda'):
                         break
 
-                    Params.countdown = 3
-                    Params.start_time = datetime.now()
                     Params.initial_face_position = None
-                    
                     ret, new_frame = self.cap.read()
                     if not ret:
                         break
 
                     users : list[User] = self.find_face(frame, face)
                     if users:
-                        user = users[0]
-                        if not self.show(new_frame, face = face, text = f'{user.name}', rectangle_color=Colors.GREEN, text_color=Colors.GREEN):
+                        if not check_faces(frame = frame, face = face, new_frame = new_frame, users = users, frame_name = self.frame_name):
                             break
                     
                     else:
-                        if not self.show(new_frame, face = face, text = "Ro'yxatdan o'tmagan", rectangle_color=Colors.RED, text_color=Colors.RED):
+                        if not show(new_frame, self.frame_name, face = face, text = "Ro'yxatdan o'tmagan", color = Colors.RED):
                             break
-
                     sleep(5)
-                
-
                            
                 else:
                     start_time = Params.start_time if Params.start_time else datetime.now()
@@ -195,6 +196,39 @@ class FaceRecognizer:
         return wrapper
 
 
+def check_faces(frame : MatLike = None, new_frame : MatLike = None, face : Face = None, users : list[User] = [], frame_name : str = None) -> bool:
+    status = True
+    found : bool = False
+
+    for user in users:
+        res = verify_face(frame, face, user)
+        if res.verified:
+            status = show(new_frame, frame_name, face = face, text = f'{user.name}', color = Colors.GREEN)
+            found = True
+            break
+
+    if not found:
+        show(new_frame, frame_name, face = face, text = "Ro'yxatdan o'tmagan", color = Colors.RED)
+
+    return status
+
+def show(frame : MatLike, frame_name : str,
+         face : Face = None, 
+         text : str = None,
+         color : tuple[int] = Colors.BLUE) -> bool:
+        
+    if isinstance(face, Face):
+        cv2.rectangle(frame, (face.x, face.y), (face.x2, face.y2), color, 2)
+        if text:
+            cv2.putText(frame, text, (face.x, face.y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        
+    cv2.imshow(frame_name, frame)
+        
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        return False        
+    return True
+
+
 fr = FaceRecognizer()
 db = DataBase('data/data.sqlite')
 
@@ -230,11 +264,22 @@ def find_face(frame : MatLike, face : Face) -> list[User]:
                 users.append(user)
     return users
 
-@fr.verify_face_handler()
-def verify_face(frame : MatLike, face : Face, user : User) -> list[User]:
+
+def verify_face(frame : MatLike, face : Face, user : User) -> VerificationResolt:
     face_frame = frame[face.y:face.y2, face.x:face.x2]  # Crop the face
     
-    DeepFace.verify(face_frame, user.photo_path)
+    if not os.path.exists(user.photo_path):
+        print(f"user id: {user.id}, {user.photo_path} not exsit")
+
+    resolt = DeepFace.verify(face_frame, user.photo_path, 
+                             anti_spoofing = False, 
+                             model_name = 'ArcFace',
+                             enforce_detection = False)
+    if isinstance(resolt, dict):
+        verified = resolt.get('verified', False)
+        return VerificationResolt(verified = verified)
+
+    return VerificationResolt()
 
 if __name__ == '__main__':
     fr.start()
