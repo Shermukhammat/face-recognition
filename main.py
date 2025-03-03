@@ -103,11 +103,11 @@ class FaceRecognizer:
             if not ret:
                 break
 
-            # if skeep:
-            #     skeep = False
-            #     continue
-            # else:
-            #     skeep = True
+            if skeep:
+                skeep = False
+                continue
+            else:
+                skeep = True
             
             faces : list[Face] = self.extract_faces(frame)
             if len(faces) == 1:
@@ -123,6 +123,7 @@ class FaceRecognizer:
                         break
 
                 elif face.size_to_small(frame):
+                    Params.initial_face_position = None
                     if not show(frame, self.frame_name, face=face, text = "Yaqinroq keling", color = Colors.RED):
                         break
                     
@@ -133,7 +134,7 @@ class FaceRecognizer:
                 elif Params.countdown <= 0:
                     if not show(frame, self.frame_name, face = face, text = f'Aniqlanmoqda'):
                         break
-
+                    camera()
                     Params.initial_face_position = None
                     ret, new_frame = self.cap.read()
                     if not ret:
@@ -145,9 +146,10 @@ class FaceRecognizer:
                             break
                     
                     else:
+                        wrong()
                         if not show(new_frame, self.frame_name, face = face, text = "Ro'yxatdan o'tmagan", color = Colors.RED):
                             break
-                    sleep(5)
+                    sleep(2)
                            
                 else:
                     start_time = Params.start_time if Params.start_time else datetime.now()
@@ -204,10 +206,14 @@ def check_faces(frame : MatLike = None, new_frame : MatLike = None, face : Face 
         res = verify_face(frame, face, user)
         if res.verified:
             status = show(new_frame, frame_name, face = face, text = f'{user.name}', color = Colors.GREEN)
+            correct()
             found = True
             break
-
+    
+    
     if not found:
+        print('wrong')
+        wrong()
         show(new_frame, frame_name, face = face, text = "Ro'yxatdan o'tmagan", color = Colors.RED)
 
     return status
@@ -228,6 +234,33 @@ def show(frame : MatLike, frame_name : str,
         return False        
     return True
 
+
+
+
+import pygame
+
+pygame.mixer.init()  # Initialize once at the beginning
+
+def sound(path: str):
+    try:
+        sound = pygame.mixer.Sound(path)
+        sound.play()
+    except Exception as e:
+        print(f"Error playing sound: {e}")
+
+def camera():
+    sound('data/assets/camera_effect.mp3')
+
+
+def wrong():
+    sound('data/assets/wrong.mp3')
+    # tr = threading.Thread(target=sound, args=('data/assets/wrong.mp3',))
+    # tr.start()
+
+def correct():
+    sound('data/assets/correct.mp3')
+    # tr = threading.Thread(target=sound, args=('data/assets/correct.mp3',))
+    # tr.start()
 
 fr = FaceRecognizer()
 db = DataBase('data/data.sqlite')
@@ -250,7 +283,7 @@ def find_face(frame : MatLike, face : Face) -> list[User]:
     face_frame = frame[face.y:face.y2, face.x:face.x2]  # Crop the face
     
     users = []
-    results = DeepFace.find(face_frame, db_path="./data/images", enforce_detection=False, silent=True)
+    results = DeepFace.find(face_frame, db_path="./data/images", enforce_detection=False, silent=True, refresh_database = True)
     for result in results:
         if result.empty:
             continue
