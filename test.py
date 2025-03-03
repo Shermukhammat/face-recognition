@@ -5,6 +5,7 @@ from deepface import DeepFace
 import pandas as pd
 from time import sleep
 import os
+import pprint
 
 
 data = {
@@ -109,6 +110,8 @@ while True:
     
                 # if results and not results[0].empty:
                 for result in results:
+                    if result.empty:
+                        continue
                     identity = result['identity'].iloc[0]
         
                     # Proper filename extraction
@@ -120,11 +123,11 @@ while True:
                         threshold = verification_resolt["threshold"]  # Model-specific threshold for face match
 
                         # Convert distance to percentage similarity (Lower distance = Higher similarity)
-                        confidence = max(0, (1 - distance / threshold) * 100)
+                        # confidence = max(0, (1 - distance / threshold) * 100)
 
-                        print(f"Match: {verification_resolt['verified']}")
-                        print(f"Distance: {distance:.4f}")
-                        print(f"Confidence: {confidence:.2f}%")
+                        # print(f"Match: {verification_resolt['verified']}")
+                        # print(f"Distance: {distance:.4f}")
+                        # print(f"Confidence: {confidence:.2f}%")
                     
 
                         text = data.get(file_key, "Ro'yxatdan o'tmagan")
@@ -133,7 +136,6 @@ while True:
                         else:
                             color = green
                     
-                        text += f" {1 - result['distance']:.2f} %"
                         # Reset counters
                         initial_face_position = None
                     else:
