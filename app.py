@@ -1,62 +1,35 @@
-from PyQt5.QtWidgets import (QWidget, QLabel, QPushButton, QVBoxLayout, 
-                            QHBoxLayout, QApplication, QFrame)
+from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QApplication, QFrame
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap, QImage, QFont
-import cv2
-import sys
+from styles import main_gui_style
+from mytypes import Params, Face, VerificationResolt
+import cv2, sys
 
 
 
 class FaceIdApp(QWidget):
-    def __init__(self):
+    def __init__(self, title : str = "Yo`qlamachi"):
         super().__init__()
 
         # Setup UI
-        self.setWindowTitle("Face ID")
+        self.setWindowTitle(title)
         self.setGeometry(100, 100, 1200, 800)
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.setStyleSheet(main_gui_style)
 
-        # Set application style
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #2E2E2E;
-                color: #FFFFFF;
-            }
-            QPushButton {
-                background-color: #4A4A4A;
-                border: 2px solid #5A5A5A;
-                border-radius: 5px;
-                padding: 10px;
-                min-width: 120px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #5A5A5A;
-            }
-            QPushButton:pressed {
-                background-color: #3A3A3A;
-            }
-            QLabel {
-                background-color: #1E1E1E;
-                border: 2px solid #3A3A3A;
-                border-radius: 5px;
-            }
-        """)
-
-        # Create main font
         app_font = QFont()
         app_font.setFamily("Arial")
         app_font.setPointSize(12)
         self.setFont(app_font)
 
-        # Video Feed Label (Left Side)
+        # Video label (Left Side)
         self.video_label = QLabel(self)
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setSizePolicy(self.sizePolicy().Expanding, self.sizePolicy().Expanding)
         self.video_label.setMinimumSize(640, 480)
 
-        camera_logo = QPixmap("data/assets/camera_logo.jpg")
-        self.video_label.setPixmap(camera_logo)
+        self.camera_logo = QPixmap("data/assets/camera_logo.png")
+        self.video_label.setPixmap(self.camera_logo)
 
         # Info Panel (Right Side)
         info_panel = QFrame()
@@ -82,7 +55,7 @@ class FaceIdApp(QWidget):
             label.setStyleSheet("font-size: 16px;")
 
         # Add info widgets
-        title = QLabel("Yuzni tnish ilovasi")
+        title = QLabel("Yuzni tanish ilovasi")
         title.setStyleSheet("font-size: 20px; ")
         title.setAlignment(Qt.AlignCenter)
         info_layout.addWidget(title)
@@ -142,6 +115,8 @@ class FaceIdApp(QWidget):
         self.start_button.clicked.connect(self.start_recording)
         self.stop_button.clicked.connect(self.stop_recording)
         self.exit_button.clicked.connect(self.close_app)
+    
+
 
     def update_frame(self):
         """ Capture video frame and display it """
@@ -175,7 +150,7 @@ class FaceIdApp(QWidget):
             self.recording = False
             self.timer.stop()
             self.start_button.setStyleSheet("background-color: #006400; color: #00FF00;")
-            self.status_label.setText("Status: tayyor")
+            self.status_label.setText("Status: to`xtatildi")
             self.status_label.setStyleSheet("font-size: 18px; color: #00FF00;")
 
     def close_app(self):

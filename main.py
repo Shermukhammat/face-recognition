@@ -18,7 +18,7 @@ class Params:
     start_time = None
     movement_threshold = 30 # Pixels allowed for movement
     initial_face_position = None
-    anti_spoofling = True
+    anti_spoofling = False
 
     # Define size constraints (30% to 70%)
     max_height = 80
@@ -83,8 +83,9 @@ class Face:
 
 
 class VerificationResolt:
-    def __init__(self, verified : bool = False):
+    def __init__(self, verified : bool = False, similarity_score : int = None):
         self.verified = verified
+        self.similarity_score = similarity_score
         # DeepFace.verify()
         
 
@@ -206,13 +207,13 @@ def check_faces(frame : MatLike = None, new_frame : MatLike = None, face : Face 
         res = verify_face(frame, face, user)
         if res.verified:
             status = show(new_frame, frame_name, face = face, text = f'{user.name}', color = Colors.GREEN)
+            
             correct()
             found = True
             break
     
     
     if not found:
-        print('wrong')
         wrong()
         show(new_frame, frame_name, face = face, text = "Ro'yxatdan o'tmagan", color = Colors.RED)
 
@@ -268,11 +269,11 @@ db = DataBase('data/data.sqlite')
 
 @fr.extract_faces_handler()
 def extract_faces(frame : MatLike) -> list[Face]:
-    faces = DeepFace.extract_faces(frame, detector_backend='ssd', enforce_detection=False, anti_spoofing=True)
+    faces = DeepFace.extract_faces(frame, detector_backend='ssd', enforce_detection=False, anti_spoofing=Params.anti_spoofling)
     resolt = []
     for face in faces:
         region = face["facial_area"]  # Get bounding box
-        is_real = face.get('is_real') # Is face real or not
+        is_real = face.get('is_real', True) # Is face real or not
         x, y, w, h = region["x"], region["y"], region["w"], region["h"]
 
         resolt.append(Face(x = x, y = y, w = w, h = h, is_real = is_real))
@@ -304,13 +305,17 @@ def verify_face(frame : MatLike, face : Face, user : User) -> VerificationResolt
     if not os.path.exists(user.photo_path):
         print(f"user id: {user.id}, {user.photo_path} not exsit")
 
-    resolt = DeepFace.verify(face_frame, user.photo_path, 
+    result = DeepFace.verify(face_frame, user.photo_path, 
                              anti_spoofing = False, 
                              model_name = 'ArcFace',
                              enforce_detection = False)
-    if isinstance(resolt, dict):
-        verified = resolt.get('verified', False)
-        return VerificationResolt(verified = verified)
+
+    
+    if isinstance(result, dict):
+        similarity_score = 1 - (result["distance"] / result["threshold"]) 
+        # print('similarity_score:', similarity_score)
+        verified = True if similarity_score > 0.5 else False
+        return VerificationResolt(verified = verified, similarity_score=similarity_score)
 
     return VerificationResolt()
 
