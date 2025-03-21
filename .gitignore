@@ -1,5 +1,6 @@
 data/images
 data/data.sqlite3
+config.py
 
 
 # Byte-compiled / optimized / DLL files

@@ -7,7 +7,7 @@ Base : DeclarativeBase = declarative_base()
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     name = Column(String, nullable=False)
     photo_path = Column(String, nullable=False)
 
@@ -25,7 +25,9 @@ class DataBase:
         session = self.sesion()
         session.add(user)
         session.commit()
+        session.refresh(user)  # Ensure all attributes (like id) are loaded
         session.close()
+        return user
 
     def get_user(self, id: int) -> User:
         session = self.sesion()
@@ -57,9 +59,13 @@ class DataBase:
 if __name__ == '__main__':
     db = DataBase('data.sqlite')
 
-    db.delete_user(3)
-    user = db.get_user(3)
-    if user:
-        print(user.id, user.name, user.photo_path)
-        user.name = "Shermuhammad"
-        db.update_user(user)
+    user = User(id = 1, name = "sher", photo_path = "photo_path")
+    # db.add_user(user)
+    db.update_user(user)
+    # print(user.id, user.name, user.photo_path)
+    # db.delete_user(3)
+    # user = db.get_user(3)
+    # if user:
+    #     print(user.id, user.name, user.photo_path)
+    #     user.name = "Shermuhammad"
+    #     db.update_user(user)
