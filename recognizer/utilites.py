@@ -27,5 +27,8 @@ def camera():
 def wrong():
     sound(resource_path('data/assets/wrong.mp3'))
 
-def correct():
-    sound(resource_path('data/assets/correct.mp3'))
+def correct(marked: bool = False):
+    if marked:
+        sound(resource_path('data/assets/marked.mp3'))
+    else:
+        sound(resource_path('data/assets/correct.mp3'))

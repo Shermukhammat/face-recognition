@@ -25,8 +25,9 @@ class FaceIdApp(QWidget):
         
         # Video recording state
         self.recording = False
+        self.camera_in_use = False
         self.frame_count = 0
-        self.db = DataBase(resource_path('data/data.sqlite'))
+        self.db = DataBase(resource_path('data/data.sqlite'), resource_path('data/last.json'))
         self.fr = FaceRecognizer(camera = 0, db = self.db)
 
     def _init_ui(self, title: str) -> None:
@@ -149,6 +150,9 @@ class FaceIdApp(QWidget):
     def update_frame(self):
         ret, frame = self.cap.read()
         if not ret:
+            self.stop_recording()
+            self.status_label.setText(f"Status: <span style='color: red;'>Kamera band</span>")
+            QApplication.processEvents()
             return
         
         if ret:
@@ -235,11 +239,22 @@ class FaceIdApp(QWidget):
                 self.user_label.setText(f"Foydalanuvchi: <span style='color: #00FF00;font-size: 16px;'>{user.name}</span>")
                 self.confidence_label.setText(f"Aniqlik: <span style='color: #00FF00;font-size: 16px;'>{res.similarity_score}</span>")
                 self.id_label.setText(f"ID: <span style='color: #00FF00;font-size: 16px;'>{user.id}</span>")
+
                 self.confidence_label
                 self.show_frame(new_frame)
                 
-                QApplication.processEvents() 
+                group = self.db.get_group(user.group)
+                if group:
+                    if group.is_marked(user):
+                        self.status_label.setText(f"Status: Allaqachon yo'qlama qilngan")
+                        self.status_label.setStyleSheet("font-size: 18px; color: #FFFF00;")
+                    else:
+                        self.status_label.setText(f"Status: Yo'qlama qilndi")
+                        self.status_label.setStyleSheet("font-size: 18px; color: #00FF00;")
+                
+                QApplication.processEvents()
                 correct()
+
                 if self.timer.isActive():
                     self.timer.stop()
                 QTimer.singleShot(5000, self.reset_info_panel)
@@ -275,6 +290,7 @@ class FaceIdApp(QWidget):
         for label in [self.status_label, self.confidence_label, self.user_label, self.id_label]:
             label.setAlignment(Qt.AlignCenter)
             if label == self.status_label:
+                self.status_label.setText(f"Status: Ishlamoqda")
                 label.setStyleSheet("font-size: 18px; color: #00FF00;")
             else:
                 label.setStyleSheet("font-size: 16px;")
@@ -287,6 +303,7 @@ class FaceIdApp(QWidget):
             if not self.cap.isOpened():
                 self.cap = cv2.VideoCapture(0)
             self.recording = True
+            self.camera_in_use = False
             self.timer.start(30)
             self.start_button.setStyleSheet("background-color: #004400; color: #00FF00;")
             self.status_label.setText("Status: ishlamoqda ...")

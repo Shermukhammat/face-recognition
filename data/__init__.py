@@ -1,1 +1,1 @@
-from .main import DataBase, User
+from .main import DataBase, User, Group

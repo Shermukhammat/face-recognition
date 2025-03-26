@@ -1,192 +1,111 @@
-from PyQt5.QtWidgets import (QWidget, QLabel, QPushButton, QVBoxLayout, 
-                            QHBoxLayout, QApplication, QFrame)
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QPixmap, QImage, QFont
-import cv2
-import sys
+# import pandas as pd 
+# import os
+# from datetime import datetime, timedelta
+# from data import User
 
 
 
-class FaceIdApp(QWidget):
-    def __init__(self):
-        super().__init__()
 
-        # Setup UI
-        self.setWindowTitle("Face ID")
-        self.setGeometry(100, 100, 1200, 800)
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
+# uzbek_months = {
+#     1: "yanvar",
+#     2: "fevral",
+#     3: "mart",
+#     4: "aprel",
+#     5: "may",
+#     6: "iyun",
+#     7: "iyul",
+#     8: "avgust",
+#     9: "sentabr",
+#     10: "oktabr",
+#     11: "noyabr",
+#     12: "dekabr"
+# }
 
-        # Set application style
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #2E2E2E;
-                color: #FFFFFF;
-            }
-            QPushButton {
-                background-color: #4A4A4A;
-                border: 2px solid #5A5A5A;
-                border-radius: 5px;
-                padding: 10px;
-                min-width: 120px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #5A5A5A;
-            }
-            QPushButton:pressed {
-                background-color: #3A3A3A;
-            }
-            QLabel {
-                background-color: #1E1E1E;
-                border: 2px solid #3A3A3A;
-                border-radius: 5px;
-            }
-        """)
-
-        # Create main font
-        app_font = QFont()
-        app_font.setFamily("Arial")
-        app_font.setPointSize(12)
-        self.setFont(app_font)
-
-        # Video Feed Label (Left Side)
-        self.video_label = QLabel(self)
-        self.video_label.setAlignment(Qt.AlignCenter)
-        self.video_label.setSizePolicy(self.sizePolicy().Expanding, self.sizePolicy().Expanding)
-        self.video_label.setMinimumSize(640, 480)
-
-        camera_logo = QPixmap("data/assets/camera_logo.jpg")
-        self.video_label.setPixmap(camera_logo)
-
-        # Info Panel (Right Side)
-        info_panel = QFrame()
-        info_panel.setFrameShape(QFrame.StyledPanel)
-        info_layout = QVBoxLayout(info_panel)
-        
-        # Information labels
-        self.status_label = QLabel("Status: tayyor")
-        self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setStyleSheet("font-size: 18px; color: #00FF00;")
-
-        image_label = QLabel()
-        info_image = QPixmap("data/assets/face.png")  # Replace with your image path
-        image_label.setPixmap(info_image.scaled(400, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        image_label.setAlignment(Qt.AlignCenter)
-                
-        self.confidence_label = QLabel("Confidence: --%")
-        self.user_label = QLabel("User: Unknown")
-        self.fps_label = QLabel("FPS: --")
-        
-        for label in [self.confidence_label, self.user_label, self.fps_label]:
-            label.setAlignment(Qt.AlignCenter)
-            label.setStyleSheet("font-size: 16px;")
-
-        # Add info widgets
-        title = QLabel("Yuzni tnish ilovasi")
-        title.setStyleSheet("font-size: 20px; ")
-        title.setAlignment(Qt.AlignCenter)
-        info_layout.addWidget(title)
-        
-        info_layout.addWidget(self.status_label)
-        info_layout.addStretch()
-        info_layout.addWidget(image_label)
-        info_layout.addWidget(self.user_label)
-        info_layout.addWidget(self.confidence_label)
-        info_layout.addWidget(self.fps_label)
-        info_layout.addStretch()
-        info_layout.addWidget(QLabel("Sistema statusi: online"))
-        info_panel.setLayout(info_layout)
+# def load_csv(file_path : str)-> pd.DataFrame:
+#     if os.path.exists(file_path):
+#         df = pd.read_csv(file_path)
+#     else:
+#         df = pd.DataFrame(columns=["id", "isim"])
+#         df.to_csv(file_path, index=False)
+#     return df
 
 
 
-        # Buttons
-        self.start_button = QPushButton("▶️ Ishga tushrish")
-        self.stop_button = QPushButton("⏹️ To'xtatish")
-        self.exit_button = QPushButton("⏏️ Chiqish")
-        
-        # Button styling
-        self.start_button.setStyleSheet("background-color: #006400; color: #00FF00;")
-        self.stop_button.setStyleSheet("background-color: #640000; color: #FF0000;")
-        self.exit_button.setStyleSheet("background-color: #4A4A4A; color: #FF0000;")
+# class Group:
+#     def __init__(self, name : str, create : bool = False):
+#         if create and not os.path.exists(f"marks/{name}"):
+#             os.makedirs(f"marks/{name}")
+#         self.name = name
+#         self.df = pd.read_csv(self.file_path)
+    
 
-        # Layouts
-        main_layout = QHBoxLayout()
-        left_panel = QVBoxLayout()
-        right_panel = QVBoxLayout()
+#     def update_df(self) -> pd.DataFrame:
+#         self.df = pd.read_csv(self.file_path)
 
-        # Left Panel (Video + Controls)
-        left_panel.addWidget(self.video_label)
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.start_button)
-        button_layout.addWidget(self.stop_button)
-        button_layout.addWidget(self.exit_button)
-        left_panel.addLayout(button_layout)
-
-        # Right Panel (Information)
-        right_panel.addWidget(info_panel)
-
-        main_layout.addLayout(left_panel, 70)  # 70% width
-        main_layout.addLayout(right_panel, 30)  # 30% width
-        self.setLayout(main_layout)
-
-        # OpenCV Video Capture
-        self.cap = cv2.VideoCapture(0)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_frame)
-
-        # Video Recorder
-        self.recording = False
-        self.frame_count = 0
-
-        # Connect Buttons
-        self.start_button.clicked.connect(self.start_recording)
-        self.stop_button.clicked.connect(self.stop_recording)
-        self.exit_button.clicked.connect(self.close_app)
-
-    def update_frame(self):
-        """ Capture video frame and display it """
-        ret, frame = self.cap.read()
-        if ret:
-            self.frame_count += 1
-            # Calculate FPS every 30 frames
-            if self.frame_count % 30 == 0:
-                fps = self.cap.get(cv2.CAP_PROP_FPS)
-                self.fps_label.setText(f"FPS: {fps:.1f}")
+#     @property
+#     def file_path(self) -> str:
+#         now = datetime.now()
+#         path = f"marks/{self.name}/{uzbek_months.get(now.month)}_{now.year}.csv"
+#         if not os.path.exists(path):
+#             df = pd.DataFrame(columns=["id", "isim"])
+#             df.to_csv(path, index=False)
             
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, ch = frame.shape
-            bytes_per_line = ch * w
-            q_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
-            self.video_label.setPixmap(QPixmap.fromImage(q_image).scaled(
-                self.video_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+#         return path
+    
+    
+#     @property
+#     def today_column(self) -> str:
+#         now = datetime.now()
+#         return now.strftime("%d.%m.%Y")
+    
+#     def is_marked(self, user: User) -> bool:
+#         self.update_df()
+#         if self.today_column not in self.df.columns:
+#             self.df[self.today_column] = "-"
+#             self.df.to_csv(self.file_path, index=False)
 
-    def start_recording(self):
-        """ Start recording video """
-        if not self.recording:
-            self.recording = True
-            self.timer.start(30)
-            self.start_button.setStyleSheet("background-color: #004400; color: #00FF00;")
-            self.status_label.setText("Status: ishlamoqda ...")
-            self.status_label.setStyleSheet("font-size: 18px; color: #00FF00;")
-
-    def stop_recording(self):
-        """ Stop recording video """
-        if self.recording:
-            self.recording = False
-            self.timer.stop()
-            self.start_button.setStyleSheet("background-color: #006400; color: #00FF00;")
-            self.status_label.setText("Status: tayyor")
-            self.status_label.setStyleSheet("font-size: 18px; color: #00FF00;")
-
-    def close_app(self):
-        """ Close the application properly """
-        self.timer.stop()
-        self.cap.release()
-        self.close()
+#         user_data = self.df.loc[self.df['id'] == user.id]
+#         if not user_data.empty:
+#             mark = user_data[self.today_column].iloc[0]
+#             if mark == '-':
+#                 self.df.loc[self.df['id'] == user.id, self.today_column] = '+'
+#                 self.df.to_csv(self.file_path, index=False)
+#                 return False
+#         else:
+#             new_user = {"id": user.id, "isim": user.name}
+#             for col in self.df.columns:
+#                 if col not in ["id", "isim"]:
+#                     new_user[col] = "-"
+#             new_user[self.today_column] = "+"
+#             self.df = pd.concat([self.df, pd.DataFrame([new_user])], ignore_index=True)
+#             self.df = self.df.sort_values(by="isim").reset_index(drop=True)
+#             self.df.to_csv(self.file_path, index=False)
+#             return False
+#         return True
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = FaceIdApp()
-    window.showMaximized()
-    sys.exit(app.exec_())
+# df = Group('3-guruh', create=True)
+# user = User()
+# user.name = "Obid asamov"
+# user.id = 3
+# user.group = 'test guruh'
+# print(df.is_marked(user))
+
+
+# # print(df.columns)
+# # print()
+
+from data import DataBase, User, Group
+import asyncio
+
+
+
+db = DataBase('data/data.sqlite')
+u = User()
+u.name = "sher"
+u.group = 'test'
+u.photo_path = 'blah'
+
+user = db.add_user(u)
+if user:
+    print(user.name, user.id, user.group)
